@@ -3,190 +3,187 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Mercado Limpio Global</title>
+  <title>Sistema Global ML</title>
   <meta name="theme-color" content="#0f172a">
   <link rel="manifest" href="./manifest.json">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
   <style>
-    /* RESET Y BASICS */
-    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-    body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; font-family: system-ui, -apple-system, sans-serif; }
+    /* === RESET === */
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
+    body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; font-family: sans-serif; }
 
-    /* CONTENEDOR DE APPS (IFRAMES) */
-    .app-container {
-      position: absolute;
-      top: 0; left: 0; width: 100%; height: 100%;
-      border: none;
-      opacity: 0;
-      pointer-events: none; /* No clickeable cuando está oculta */
-      transition: opacity 0.3s ease, transform 0.3s ease;
-      transform: scale(0.98); /* Efecto zoom suave al entrar */
-      background: #0f172a; /* Fondo de carga */
+    /* === CONTENEDOR DE APPS (IFRAMES) === */
+    .app-layer {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      border: 0; opacity: 0; pointer-events: none; z-index: 1;
+      transform: scale(0.96); transition: opacity 0.3s, transform 0.3s;
+      background: #1e293b; /* Fondo neutro mientras carga */
+    }
+    .app-layer.active {
+      opacity: 1; pointer-events: auto; transform: scale(1); z-index: 2;
     }
 
-    /* ESTADO ACTIVO DE LA APP */
-    .app-container.active {
-      opacity: 1;
-      pointer-events: auto;
-      transform: scale(1);
-      z-index: 10;
-    }
-
-    /* BARRA DE NAVEGACIÓN (DOCK FLOTANTE) */
-    .dock-wrapper {
+    /* === BARRA DE NAVEGACIÓN RETRÁCTIL === */
+    #nav-dock {
       position: fixed;
-      bottom: 20px; 
-      left: 0; right: 0;
-      display: flex;
-      justify-content: center;
-      z-index: 1000;
-      padding-bottom: env(safe-area-inset-bottom, 0px);
-      pointer-events: none; /* Dejar pasar clicks en los costados */
+      bottom: 0; left: 0; right: 0;
+      z-index: 9999;
+      background: rgba(15, 23, 42, 0.85); /* Fondo oscuro semitransparente */
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      border-top: 1px solid rgba(255,255,255,0.1);
+      box-shadow: 0 -4px 20px rgba(0,0,0,0.4);
+      
+      /* Animación de deslizar */
+      transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+      transform: translateY(0); /* Estado inicial: visible */
+      
+      /* Ajuste para iPhone X/11/12+ (Safe Area) */
+      padding-bottom: env(safe-area-inset-bottom, 20px); 
     }
 
-    .dock {
-      pointer-events: auto;
-      background: rgba(15, 23, 42, 0.85);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
+    /* ESTADO MINIMIZADO (Se esconde hacia abajo) */
+    #nav-dock.minimized {
+      transform: translateY(calc(100% - 24px)); /* Deja 24px visibles para la lengüeta */
+      background: rgba(15, 23, 42, 0.95); /* Menos transparente al bajar para que se vea la lengüeta */
+    }
+
+    /* === LENGÜETA / MANIJA (El botón para subir/bajar) === */
+    .dock-handle {
+      position: absolute;
+      top: -24px; /* Flota justo encima de la barra */
+      left: 50%; transform: translateX(-50%);
+      width: 60px; height: 24px;
+      background: rgba(15, 23, 42, 0.9);
+      border-radius: 12px 12px 0 0; /* Redondeado arriba */
       border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 24px;
-      padding: 6px;
-      display: flex;
-      gap: 8px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-    }
-
-    /* BOTONES */
-    .dock-btn {
-      border: none;
-      background: transparent;
-      color: #94a3b8; /* Gris inactivo */
-      padding: 10px 20px;
-      border-radius: 18px;
-      font-size: 13px;
-      font-weight: 700;
+      border-bottom: none;
+      display: flex; align-items: center; justify-content: center;
       cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); /* Efecto rebote */
-      min-width: 110px;
-      justify-content: center;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
+      box-shadow: 0 -2px 10px rgba(0,0,0,0.2);
+      z-index: 10000;
+    }
+    .handle-icon {
+      color: #94a3b8; font-size: 14px; transition: transform 0.4s;
+    }
+    /* Rotar flecha cuando está minimizado */
+    #nav-dock.minimized .handle-icon { transform: rotate(180deg); }
+
+    /* === GRILLA DE BOTONES (50% / 50%) === */
+    .dock-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      height: 60px; /* Altura cómoda para el dedo */
     }
 
-    .dock-btn i { font-size: 16px; transition: transform 0.3s; }
-
-    /* ESTADO ACTIVO BOTÓN 1 (CLIENTES) */
-    .dock-btn.active-clientes {
-      background: #3b82f6; /* Azul */
-      color: white;
-      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
-      transform: translateY(-2px);
+    .nav-btn {
+      background: transparent; border: none;
+      color: #64748b; /* Gris inactivo */
+      font-weight: 700; font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+      cursor: pointer; position: relative;
+      transition: all 0.2s;
     }
 
-    /* ESTADO ACTIVO BOTÓN 2 (PEDIDOS) */
-    .dock-btn.active-pedidos {
-      background: #06b6d4; /* Cyan/Verde */
-      color: white;
-      box-shadow: 0 4px 12px rgba(6, 182, 212, 0.4);
-      transform: translateY(-2px);
-    }
+    .nav-btn i { font-size: 20px; margin-bottom: 2px; transition: transform 0.2s; }
     
-    .dock-btn:active { transform: scale(0.95); }
+    /* Efecto al tocar */
+    .nav-btn:active i { transform: scale(0.9); }
 
-    /* TEXTO DINÁMICO */
-    .btn-label { display: block; }
-    
-    /* PWA INSTALL PROMPT (Opcional) */
-    #install-btn { display:none; position:fixed; top:10px; right:10px; z-index:2000; background:white; color:black; padding:5px 10px; border-radius:8px; font-weight:bold; font-size:11px; }
+    /* === ESTADOS ACTIVOS (Colores) === */
+    /* Clientes: Azul */
+    .nav-btn.active-clientes { color: #3b82f6; background: linear-gradient(to top, rgba(59,130,246,0.1), transparent); box-shadow: inset 0 -2px 0 #3b82f6; }
+    .nav-btn.active-clientes i { text-shadow: 0 0 10px rgba(59,130,246,0.5); }
+
+    /* Pedidos: Verde/Cyan */
+    .nav-btn.active-pedidos { color: #22c55e; background: linear-gradient(to top, rgba(34,197,94,0.1), transparent); box-shadow: inset 0 -2px 0 #22c55e; }
+    .nav-btn.active-pedidos i { text-shadow: 0 0 10px rgba(34,197,94,0.5); }
+
+    /* Separador vertical sutil */
+    .separator { width: 1px; background: rgba(255,255,255,0.05); height: 60%; align-self: center; }
+
   </style>
 </head>
 <body>
 
-  <iframe 
-    id="frame-clientes" 
-    class="app-container active" 
+  <iframe id="app-clientes" class="app-layer active"
     src="https://pablosantamaria26.github.io/app-vendedores/"
-    allow="geolocation; microphone; camera; fullscreen">
-  </iframe>
+    allow="geolocation; microphone; camera; fullscreen"></iframe>
 
-  <iframe 
-    id="frame-pedidos" 
-    class="app-container" 
-    src="https://pablosantamaria26.github.io/App-Pedidos-ML/index.html" 
-    allow="geolocation; microphone; camera; fullscreen">
-  </iframe>
+  <iframe id="app-pedidos" class="app-layer"
+    src="https://pablosantamaria26.github.io/App-Pedidos-ML/index.html"
+    allow="geolocation; microphone; camera; fullscreen"></iframe>
 
-  <div class="dock-wrapper">
-    <div class="dock">
+  <div id="nav-dock">
+    <div class="dock-handle" onclick="toggleDock()">
+      <i class="fas fa-chevron-down handle-icon"></i>
+    </div>
+
+    <div class="dock-grid">
       
-      <button id="btn-clientes" class="dock-btn active-clientes" onclick="switchApp('clientes')">
+      <button id="btn-clientes" class="nav-btn active-clientes" onclick="switchTab('clientes')">
         <i class="fas fa-users"></i>
-        <span class="btn-label">CLIENTES</span>
+        <span>Clientes</span>
       </button>
 
-      <button id="btn-pedidos" class="dock-btn" onclick="switchApp('pedidos')">
+      <div class="separator"></div>
+
+      <button id="btn-pedidos" class="nav-btn" onclick="switchTab('pedidos')">
         <i class="fas fa-box-open"></i>
-        <span class="btn-label">LOGÍSTICA</span>
+        <span>Pedidos</span>
       </button>
 
     </div>
   </div>
 
   <script>
-    // Configuración
-    const frames = {
-      clientes: document.getElementById('frame-clientes'),
-      pedidos: document.getElementById('frame-pedidos')
+    const dock = document.getElementById('nav-dock');
+    const apps = {
+      clientes: document.getElementById('app-clientes'),
+      pedidos: document.getElementById('app-pedidos')
     };
     const btns = {
       clientes: document.getElementById('btn-clientes'),
       pedidos: document.getElementById('btn-pedidos')
     };
 
-    // Función de cambio de pestaña
-    function switchApp(target) {
-      // 1. Manejo de IFrames (Visibilidad)
-      // Usamos clases para animaciones CSS en lugar de display:none para no recargar la app
-      Object.keys(frames).forEach(key => {
-        if (key === target) {
-          frames[key].classList.add('active');
-        } else {
-          frames[key].classList.remove('active');
-        }
+    // Función 1: Cambiar de App
+    function switchTab(target) {
+      // Cambio visual de Apps (sin recargar)
+      Object.keys(apps).forEach(k => {
+        if (k === target) apps[k].classList.add('active');
+        else apps[k].classList.remove('active');
       });
 
-      // 2. Manejo de Botones (Estilos y Nombres)
-      // Reseteamos
-      btns.clientes.className = 'dock-btn';
-      btns.pedidos.className = 'dock-btn';
-
-      // Activamos el target
+      // Cambio visual de Botones
       if (target === 'clientes') {
         btns.clientes.classList.add('active-clientes');
-        btns.clientes.querySelector('.btn-label').textContent = 'CLIENTES';
-        btns.pedidos.querySelector('.btn-label').textContent = 'LOGÍSTICA'; // Nombre pasivo
+        btns.pedidos.classList.remove('active-pedidos');
       } else {
         btns.pedidos.classList.add('active-pedidos');
-        btns.pedidos.querySelector('.btn-label').textContent = 'PEDIDOS'; // Nombre activo
-        btns.clientes.querySelector('.btn-label').textContent = 'VENTAS'; // Nombre pasivo
+        btns.clientes.classList.remove('active-clientes');
       }
 
-      // Haptic feedback (vibración suave en Android)
-      if (navigator.vibrate) navigator.vibrate(10);
+      // Si la barra estaba minimizada, al cambiar de app conviene mostrarla un segundo para confirmar
+      // (Opcional: si prefieres que se quede escondida, borra la línea de abajo)
+      // dock.classList.remove('minimized'); 
+      
+      // Vibración suave en Android
+      if(navigator.vibrate) navigator.vibrate(12);
     }
 
-    // Service Worker Wrapper (Opcional, para cachear este contenedor)
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./sw-container.js').catch(() => {});
+    // Función 2: Minimizar / Maximizar Barra
+    function toggleDock() {
+      dock.classList.toggle('minimized');
+      // Vibración suave
+      if(navigator.vibrate) navigator.vibrate(8);
     }
+
+    // Lógica Extra: Si el usuario hace click en una app, podríamos minimizar la barra automáticamente?
+    // No podemos detectar clicks DENTRO del iframe fácilmente por seguridad cruzada,
+    // pero la lengüeta manual es lo más seguro y predecible para el usuario.
   </script>
+
 </body>
 </html>
