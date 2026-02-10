@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0d6efd" />
+  <title>Test Backend — Reparto ML</title>
+  <style>
+    :root{
+      --primary:#0d6efd;
+      --bg:#050816;
+      --card:rgba(10,18,40,.92);
+      --text:#f5f5f5;
+      --muted:#9ca3af;
+      --border:rgba(148,163,184,.28);
+      --ok:#22c55e;
+      --bad:#ef4444;
+      --warn:#f59e0b;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
+      background: radial-gradient(1200px 600px at 20% -10%, rgba(13,110,253,.35), transparent 60%),
+                  radial-gradient(900px 500px at 80% 0%, rgba(245,158,11,.18), transparent 55%),
+                  var(--bg);
+      color:var(--text);
+      padding:18px;
+    }
+    .wrap{max-width:980px;margin:0 auto;display:grid;gap:14px}
+    .card{
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:16px;
+      padding:16px;
+      box-shadow:0 12px 30px rgba(0,0,0,.35);
+    }
+    h1{margin:0 0 8px;font-size:18px}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .pill{
+      display:inline-flex;gap:8px;align-items:center;
+      padding:8px 10px;border-radius:999px;
+      border:1px solid var(--border);
+      background:rgba(255,255,255,.04);
+      font-size:12px;color:var(--muted)
+    }
+    .dot{width:10px;height:10px;border-radius:50%}
+    .dot.ok{background:var(--ok)}
+    .dot.bad{background:var(--bad)}
+    .dot.warn{background:var(--warn)}
+    label{font-size:12px;color:var(--muted)}
+    input, select{
+      width:100%;
+      padding:12px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      background:rgba(255,255,255,.04);
+      color:var(--text);
+      outline:none;
+    }
+    input::placeholder{color:rgba(156,163,175,.7)}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    @media (max-width:720px){.grid{grid-template-columns:1fr}}
+    button{
+      padding:12px 14px;border-radius:12px;
+      border:1px solid rgba(255,255,255,.12);
+      background:linear-gradient(180deg, rgba(13,110,253,.95), rgba(13,110,253,.65));
+      color:white;
+      font-weight:700;
+      cursor:pointer;
+    }
+    button.secondary{
+      background:rgba(255,255,255,.06);
+      border:1px solid var(--border);
+      color:var(--text);
+      font-weight:600;
+    }
+    button:active{transform:scale(.99)}
+    pre{
+      margin:0;
+      white-space:pre-wrap;
+      word-break:break-word;
+      background:rgba(0,0,0,.35);
+      border:1px solid var(--border);
+      border-radius:12px;
+      padding:12px;
+      font-size:12px;
+      color:#dbeafe;
+      max-height:420px;
+      overflow:auto;
+    }
+    .hint{font-size:12px;color:var(--muted);line-height:1.4}
+    .k{color:#93c5fd}
+    .b{color:#fca5a5}
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+
+    <div class="card">
+      <h1>Test de conexión al backend (Google Apps Script)</h1>
+      <div class="row" style="justify-content:space-between">
+        <div class="pill" title="URL del backend">
+          <span class="dot warn" id="dot"></span>
+          <span id="statusText">Listo para probar…</span>
+        </div>
+        <div class="pill">
+          <span class="k">Backend:</span>
+          <span id="urlText"></span>
+        </div>
+      </div>
+      <div class="hint" style="margin-top:10px">
+        Este HTML <b>ya trae tu URL</b>. Si tu Apps Script usa otro ID, cambiás <span class="k">const URL</span> abajo y listo.
+        Si tu backend expone funciones por <span class="k">action</span> o <span class="k">fn</span>, esto las prueba automáticamente.
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="grid">
+        <div>
+          <label>Repartidor</label>
+          <input id="repartidor" placeholder="Ej: TOMAS" value="TOMAS" />
+        </div>
+        <div>
+          <label>Turno</label>
+          <select id="turno">
+            <option>Mañana</option>
+            <option>Tarde</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:12px">
+        <button id="btnPing">Probar conexión (isDayCompleteApp)</button>
+        <button class="secondary" id="btnDatos">Traer datos (obtenerDatosRepartoApp)</button>
+        <button class="secondary" id="btnRaw">Llamada custom</button>
+        <button class="secondary" id="btnClear">Limpiar log</button>
+      </div>
+
+      <div class="hint" style="margin-top:10px">
+        Si tu backend usa otros nombres de función, en “Llamada custom” ponés el nombre exacto y (si aplica) parámetros.
+        La respuesta se muestra cruda abajo para que veas si viene OK o si el backend está devolviendo HTML/error.
+      </div>
+    </div>
+
+    <div class="card">
+      <h1>Log / Respuesta</h1>
+      <pre id="log"></pre>
+    </div>
+
+  </div>
+
+<script>
+/** ✅ TU URL (ya puesta) **/
+const URL = "https://script.google.com/macros/s/AKfycbwAO4O5n5sBHNGuZm4WFC1fcI6LvfFo6DbXAvTHCDIQAn11lZqoMrep9PPCVVbMOLmQ/exec";
+
+document.getElementById("urlText").textContent = URL;
+
+const $log = document.getElementById("log");
+const $dot = document.getElementById("dot");
+const $statusText = document.getElementById("statusText");
+
+function setStatus(type, text){
+  $dot.className = "dot " + (type || "warn");
+  $statusText.textContent = text || "";
+}
+
+function logLine(...args){
+  const s = args.map(x => typeof x === "string" ? x : JSON.stringify(x, null, 2)).join(" ");
+  $log.textContent += (s + "\n");
+  $log.scrollTop = $log.scrollHeight;
+}
+
+/**
+ * Llamada robusta:
+ * 1) intenta URL?action=FN&...params
+ * 2) si no devuelve JSON, intenta URL?fn=FN&...params
+ */
+async function callBackend(fnName, params = {}){
+  const qs = new URLSearchParams(params);
+
+  const tries = [
+    { mode: "action", url: `${URL}?action=${encodeURIComponent(fnName)}&${qs.toString()}` },
+    { mode: "fn",     url: `${URL}?fn=${encodeURIComponent(fnName)}&${qs.toString()}` },
+  ];
+
+  for (const t of tries){
+    logLine("—");
+    logLine(`Intentando (${t.mode}):`, t.url);
+
+    let res, text;
+    try{
+      res = await fetch(t.url, { method: "GET", cache: "no-store" });
+      text = await res.text();
+    }catch(err){
+      logLine("ERROR fetch:", String(err));
+      continue;
+    }
+
+    logLine("HTTP:", res.status, res.statusText);
+    // Intentar parsear JSON
+    try{
+      const json = JSON.parse(text);
+      return { ok: true, mode: t.mode, status: res.status, json, raw: text };
+    }catch(_){
+      // No era JSON
+      logLine("Respuesta NO JSON (primeros 300 chars):");
+      logLine(text.slice(0, 300));
+      // Si el backend devuelve HTML (pantalla), seguimos probando el otro modo
+    }
+  }
+
+  return { ok: false, error: "No se pudo obtener JSON. El backend puede estar sin publicar, con permisos incorrectos, o respondiendo HTML/error." };
+}
+
+function getTurno(){ return document.getElementById("turno").value; }
+function getRepartidor(){ return document.getElementById("repartidor").value.trim(); }
+
+document.getElementById("btnClear").addEventListener("click", ()=>{
+  $log.textContent = "";
+  setStatus("warn", "Listo para probar…");
+});
+
+document.getElementById("btnPing").addEventListener("click", async ()=>{
+  setStatus("warn", "Probando conexión…");
+  logLine("PING: isDayCompleteApp()");
+
+  const r = await callBackend("isDayCompleteApp", {});
+  if (r.ok){
+    setStatus("ok", `OK (modo ${r.mode})`);
+    logLine("JSON:", r.json);
+  }else{
+    setStatus("bad", "Falló la conexión / no devolvió JSON");
+    logLine("ERROR:", r.error);
+  }
+});
+
+document.getElementById("btnDatos").addEventListener("click", async ()=>{
+  const turno = getTurno();
+  const repartidor = getRepartidor();
+
+  setStatus("warn", "Trayendo datos…");
+  logLine(`DATOS: obtenerDatosRepartoApp(turno=${turno}, repartidor=${repartidor})`);
+
+  // Muchos backends esperan estos nombres de parámetros (ajustable)
+  const r = await callBackend("obtenerDatosRepartoApp", { turno, repartidor });
+
+  if (r.ok){
+    setStatus("ok", `OK (modo ${r.mode})`);
+    logLine("JSON:", r.json);
+  }else{
+    setStatus("bad", "No devolvió JSON");
+    logLine("ERROR:", r.error);
+  }
+});
+
+document.getElementById("btnRaw").addEventListener("click", async ()=>{
+  const fn = prompt("Nombre exacto de la función (ej: obtenerDatosRepartoApp):", "obtenerDatosRepartoApp");
+  if (!fn) return;
+
+  const paramsRaw = prompt("Parámetros como clave=valor&clave2=valor2 (vacío si no hay):", "turno=Mañana&repartidor=TOMAS") || "";
+  const params = {};
+  paramsRaw.split("&").map(x=>x.trim()).filter(Boolean).forEach(pair=>{
+    const [k,v] = pair.split("=");
+    if (k) params[decodeURIComponent(k)] = decodeURIComponent(v || "");
+  });
+
+  setStatus("warn", `Llamando ${fn}…`);
+  logLine(`CUSTOM: ${fn} params=`, params);
+
+  const r = await callBackend(fn, params);
+
+  if (r.ok){
+    setStatus("ok", `OK (modo ${r.mode})`);
+    logLine("JSON:", r.json);
+  }else{
+    setStatus("bad", "No devolvió JSON");
+    logLine("ERROR:", r.error);
+  }
+});
+
+// Auto-ping al abrir
+(async ()=>{
+  setStatus("warn", "Auto test…");
+  const r = await callBackend("isDayCompleteApp", {});
+  if (r.ok){
+    setStatus("ok", `Backend OK (modo ${r.mode})`);
+    logLine("AUTO OK:", r.json);
+  }else{
+    setStatus("bad", "Backend no responde JSON");
+    logLine("AUTO ERROR:", r.error);
+  }
+})();
+</script>
+</body>
+</html>
