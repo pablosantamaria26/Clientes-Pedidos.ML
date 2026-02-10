@@ -1,0 +1,21 @@
+{
+  "name": "Mercado Limpio Global",
+  "short_name": "ML Global",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://pablosantamaria26.github.io/app-vendedores/ml-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://pablosantamaria26.github.io/app-vendedores/ml-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
