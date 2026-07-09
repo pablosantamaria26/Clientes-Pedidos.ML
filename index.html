@@ -51,18 +51,22 @@
 
     /* ── ESCENARIO: las dos apps ── */
     #stage { flex: 1 1 auto; position: relative; min-height: 0; }
-    /* Transición SOLO por opacidad: un transform (aunque sea scale(1))
-       sobre un iframe rompe el hit-testing táctil en iPhone — los toques
-       dentro de la app quedaban muertos o corridos. */
+    /* La capa inactiva se oculta con VISIBILITY (no solo opacity/pointer-events):
+       en iPhone los iframes ignoran pointer-events:none para los TOQUES, y el
+       iframe invisible de arriba se comía todo el táctil de la app activa
+       (mouse andaba, dedo no). visibility:hidden sí lo saca del hit-testing
+       y conserva el estado de la app sin recargarla. Tampoco usamos transform
+       (scale) sobre iframes: rompe el hit-testing táctil en iOS. */
     .app-layer {
       position: absolute; inset: 0;
       width: 100%; height: 100%;
       border: 0;
       opacity: 0; pointer-events: none;
-      transition: opacity 0.25s;
+      visibility: hidden;
+      transition: opacity 0.25s, visibility 0.25s;
       background: var(--bg);
     }
-    .app-layer.active { opacity: 1; pointer-events: auto; }
+    .app-layer.active { opacity: 1; pointer-events: auto; visibility: visible; }
 
     /* ── DOCK (en el flujo del layout) ── */
     #dock {
