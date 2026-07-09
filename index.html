@@ -36,11 +36,15 @@
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; margin: 0; padding: 0; }
     html, body { width: 100%; height: 100%; overflow: hidden; }
     body {
-      /* Columna: escenario (flex:1) + dock (en flujo) → el dock NUNCA tapa */
+      /* Columna: escenario (flex:1) + dock (en flujo) → el dock NUNCA tapa.
+         Alto = SOLO lo visible. Nada de min-height:100vh: en celulares el
+         vh mide la ventana con la barra de URL oculta (más alto que lo
+         visible) y empujaba el dock y el fondo de las apps fuera de la
+         pantalla, sin scroll posible (overflow hidden). El fallback si no
+         hay dvh es el height:100% de arriba. */
       display: flex;
       flex-direction: column;
-      height: 100dvh;              /* alto visible real (acompaña al teclado) */
-      min-height: 100vh;           /* fallback navegadores viejos */
+      height: 100dvh;              /* alto visible real (acompaña la UI del navegador) */
       background: var(--bg);
       font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
     }

@@ -1,10 +1,10 @@
-/* service-worker.js — Shell Mercado Limpio (Clientes + Pedidos) v3 */
+/* service-worker.js — Shell Mercado Limpio (Clientes + Pedidos) v4 */
 // HTML: NETWORK-FIRST con timeout → el shell se actualiza solo al abrir
 // con internet, y cae al caché si no hay señal (sigue abriendo offline).
 // Nota: las apps de adentro tienen sus propios service workers en sus
 // scopes (/app-vendedores/, /App-Pedidos-ML/); este solo cachea el shell.
 
-const CACHE_NAME = "ml-shell-v3";
+const CACHE_NAME = "ml-shell-v4";
 const HTML_TIMEOUT_MS = 2500;
 const PRECACHE_URLS = ["./", "./index.html", "./manifest.json"];
 
