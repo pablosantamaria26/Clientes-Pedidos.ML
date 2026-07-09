@@ -1,10 +1,10 @@
 {
   "name": "Mercado Limpio",
-  "short_name": "ML Global",
+  "short_name": "Mercado ML",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#0f172a",
+  "background_color": "#EEF2F7",
+  "theme_color": "#EEF2F7",
   "orientation": "portrait",
   "icons": [
     {

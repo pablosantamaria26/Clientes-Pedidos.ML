@@ -1,199 +1,267 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Sistema Global ML</title>
-  <meta name="theme-color" content="#0f172a">
+  <title>Mercado Limpio</title>
+  <meta name="theme-color" content="#EEF2F7">
   <link rel="manifest" href="./manifest.json">
-  
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  
+
   <style>
-    /* === RESET === */
-    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
-    body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #0f172a; font-family: sans-serif; }
+    /* ═══════════════════════════════════════════════════════
+       SHELL — Mercado Limpio (Clientes + Pedidos)
+       El dock ocupa espacio REAL de layout: nunca tapa las apps.
+       Se esconde solo cuando el vendedor escribe (auto-hide).
+       ═══════════════════════════════════════════════════════ */
+    :root {
+      --bg:        #EEF2F7;
+      --dock-bg:   #FFFFFF;
+      --border:    rgba(12, 20, 30, 0.10);
+      --muted:     #8A94A2;
+      --text:      #0E1620;
+      --clientes:  #2E6BFF;   /* acento app Clientes (azul) */
+      --pedidos:   #0BB37B;   /* acento app Pedidos (esmeralda) */
+      --ink:       #04140E;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg:      #0A0E14;
+        --dock-bg: #10161F;
+        --border:  rgba(255, 255, 255, 0.10);
+        --muted:   #7C8794;
+        --text:    #EAF0F6;
+      }
+    }
 
-    /* === CONTENEDOR DE APPS (IFRAMES) === */
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; overflow: hidden; }
+    body {
+      /* Columna: escenario (flex:1) + dock (en flujo) → el dock NUNCA tapa */
+      display: flex;
+      flex-direction: column;
+      height: 100dvh;              /* alto visible real (acompaña al teclado) */
+      min-height: 100vh;           /* fallback navegadores viejos */
+      background: var(--bg);
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    /* ── ESCENARIO: las dos apps ── */
+    #stage { flex: 1 1 auto; position: relative; min-height: 0; }
     .app-layer {
-      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-      border: 0; opacity: 0; pointer-events: none; z-index: 1;
-      transform: scale(0.96); transition: opacity 0.3s, transform 0.3s;
-      background: #0f172a; /* Fondo oscuro de carga */
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      border: 0;
+      opacity: 0; pointer-events: none;
+      transform: scale(0.985);
+      transition: opacity 0.25s, transform 0.25s;
+      background: var(--bg);
     }
-    .app-layer.active {
-      opacity: 1; pointer-events: auto; transform: scale(1); z-index: 2;
+    .app-layer.active { opacity: 1; pointer-events: auto; transform: scale(1); }
+
+    /* ── DOCK (en el flujo del layout) ── */
+    #dock {
+      flex: 0 0 auto;
+      background: var(--dock-bg);
+      border-top: 1px solid var(--border);
+      box-shadow: 0 -4px 18px rgba(10, 20, 30, 0.06);
+      padding-bottom: env(safe-area-inset-bottom, 0px);
     }
 
-    /* === BARRA DE NAVEGACIÓN (DOCK) === */
-    #nav-dock {
-      position: fixed;
-      bottom: 0; left: 0; right: 0;
-      z-index: 9999;
-      width: 100vw; /* Asegura ancho total */
-      background: rgba(15, 23, 42, 0.90); /* Fondo oscuro sólido semi-transparente */
-      backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
-      border-top: 1px solid rgba(255,255,255,0.15);
-      box-shadow: 0 -5px 25px rgba(0,0,0,0.5);
-      
-      /* Animación suave */
-      transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
-      transform: translateY(0);
-      
-      /* Espacio seguro para iPhone */
-      padding-bottom: env(safe-area-inset-bottom, 10px); 
-    }
-
-    /* Estado Minimizado */
-    #nav-dock.minimized {
-      /* Baja casi todo, deja solo la manija visible */
-      transform: translateY(calc(100% - 10px)); 
-    }
-
-    /* === MANIJA (DEDOS GORDOS FRIENDLY) === */
-    .dock-handle {
-      position: absolute;
-      top: -32px; /* Más alto para agarrarlo fácil */
-      left: 50%; 
-      transform: translateX(-50%);
-      width: 140px; /* MUCHO MÁS ANCHO */
-      height: 32px;
-      background: rgba(15, 23, 42, 0.95);
-      border-radius: 16px 16px 0 0;
-      border: 1px solid rgba(255,255,255,0.15);
-      border-bottom: none;
+    /* Tirita para minimizar/expandir — parte del dock, no flota sobre la app */
+    .grab {
+      height: 22px;
       display: flex; align-items: center; justify-content: center;
       cursor: pointer;
-      box-shadow: 0 -4px 12px rgba(0,0,0,0.3);
-      z-index: 10000;
     }
-    .handle-icon {
-      color: #cbd5e1; font-size: 18px; transition: transform 0.4s;
+    .grab svg {
+      width: 16px; height: 16px;
+      stroke: var(--muted); stroke-width: 2.5; fill: none;
+      stroke-linecap: round; stroke-linejoin: round;
+      transition: transform 0.3s;
     }
-    /* Flecha gira al minimizar */
-    #nav-dock.minimized .handle-icon { transform: rotate(180deg); }
+    #dock.collapsed .grab svg { transform: rotate(180deg); }
 
-    /* === GRILLA DE BOTONES === */
-    .dock-grid {
+    /* Botonera — colapsa a 0 sin salirse del flujo */
+    .dock-btns {
       display: grid;
-      grid-template-columns: 1fr 1px 1fr; /* Izquierda | Separador | Derecha */
-      align-items: center;
-      width: 100%;
-      height: 65px; /* Altura cómoda */
+      grid-template-columns: 1fr 1fr;
+      height: 58px;
+      overflow: hidden;
+      transition: height 0.3s cubic-bezier(0.25, 1, 0.5, 1);
     }
+    #dock.collapsed .dock-btns { height: 0; }
 
     .nav-btn {
       background: transparent; border: none;
-      color: #64748b; /* Gris apagado */
-      font-weight: 800; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase;
-      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;
+      color: var(--muted);
+      font-family: inherit; font-weight: 800; font-size: 11px;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
       cursor: pointer; position: relative;
-      height: 100%; width: 100%;
-      transition: all 0.25s;
+      height: 100%;
+      transition: color 0.2s, background 0.2s;
+    }
+    .nav-btn + .nav-btn { border-left: 1px solid var(--border); }
+    .nav-btn svg {
+      width: 22px; height: 22px;
+      stroke: currentColor; stroke-width: 2; fill: none;
+      stroke-linecap: round; stroke-linejoin: round;
+      transition: transform 0.15s;
+    }
+    .nav-btn:active svg { transform: scale(0.9); }
+
+    .nav-btn.on-clientes {
+      color: var(--clientes);
+      background: linear-gradient(to top, rgba(46, 107, 255, 0.10), transparent);
+      box-shadow: inset 0 -3px 0 var(--clientes);
+    }
+    .nav-btn.on-pedidos {
+      color: var(--pedidos);
+      background: linear-gradient(to top, rgba(11, 179, 123, 0.12), transparent);
+      box-shadow: inset 0 -3px 0 var(--pedidos);
     }
 
-    .nav-btn i { font-size: 22px; margin-bottom: 2px; transition: transform 0.2s; }
-    
-    /* Efecto Click */
-    .nav-btn:active i { transform: scale(0.9); }
-
-    /* === ESTADOS ACTIVOS (SOLO CAMBIA COLOR, NO TEXTO) === */
-    
-    /* Activo Clientes: Azul Intenso */
-    .nav-btn.active-clientes { 
-      color: #60a5fa; 
-      background: linear-gradient(to top, rgba(59,130,246,0.15), transparent); 
-      box-shadow: inset 0 -3px 0 #3b82f6; 
+    /* Badge: pedidos en cola sin sincronizar */
+    .badge {
+      position: absolute;
+      top: 7px; right: calc(50% - 34px);
+      min-width: 17px; height: 17px;
+      padding: 0 4px;
+      background: #FF5D5D; color: #fff;
+      border-radius: 999px;
+      font-size: 10px; font-weight: 800;
+      display: none;
+      align-items: center; justify-content: center;
+      line-height: 1;
     }
-    .nav-btn.active-clientes i { text-shadow: 0 0 15px rgba(59,130,246,0.6); }
-
-    /* Activo Pedidos: Verde Neon */
-    .nav-btn.active-pedidos { 
-      color: #34d399; 
-      background: linear-gradient(to top, rgba(34,197,94,0.15), transparent); 
-      box-shadow: inset 0 -3px 0 #22c55e; 
-    }
-    .nav-btn.active-pedidos i { text-shadow: 0 0 15px rgba(34,197,94,0.6); }
-
-    /* Separador Vertical */
-    .separator { 
-      width: 1px; 
-      height: 30px; 
-      background: rgba(255,255,255,0.1); 
-    }
-
+    .badge.show { display: flex; }
   </style>
 </head>
 <body>
 
-  <iframe id="app-clientes" class="app-layer active"
-    src="https://pablosantamaria26.github.io/app-vendedores/"
-    allow="geolocation; microphone; camera; fullscreen"></iframe>
+  <!-- ═══ ESCENARIO: las dos apps (misma origin en producción) ═══ -->
+  <div id="stage">
+    <iframe id="app-clientes" class="app-layer"
+      data-src="https://pablosantamaria26.github.io/app-vendedores/"
+      allow="geolocation; microphone; camera; fullscreen"></iframe>
 
-  <iframe id="app-pedidos" class="app-layer"
-    src="https://pablosantamaria26.github.io/App-Pedidos-ML/index.html"
-    allow="geolocation; microphone; camera; fullscreen"></iframe>
-
-  <div id="nav-dock">
-    <div class="dock-handle" onclick="toggleDock()">
-      <i class="fas fa-chevron-down handle-icon"></i>
-    </div>
-
-    <div class="dock-grid">
-      <button id="btn-clientes" class="nav-btn active-clientes" onclick="switchTab('clientes')">
-        <i class="fas fa-users"></i>
-        <span>Clientes</span>
-      </button>
-
-      <div class="separator"></div>
-
-      <button id="btn-pedidos" class="nav-btn" onclick="switchTab('pedidos')">
-        <i class="fas fa-box-open"></i>
-        <span>Pedidos</span>
-      </button>
-    </div>
+    <iframe id="app-pedidos" class="app-layer"
+      data-src="https://pablosantamaria26.github.io/App-Pedidos-ML/index.html"
+      allow="geolocation; microphone; camera; fullscreen"></iframe>
   </div>
 
+  <!-- ═══ DOCK (en el layout: nunca tapa la app) ═══ -->
+  <nav id="dock">
+    <div class="grab" onclick="toggleDock()" title="Ocultar / mostrar barra">
+      <svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+    </div>
+    <div class="dock-btns">
+      <button id="btn-clientes" class="nav-btn" onclick="switchTab('clientes')">
+        <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg>
+        <span>Clientes</span>
+      </button>
+      <button id="btn-pedidos" class="nav-btn" onclick="switchTab('pedidos')">
+        <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.3 7L12 12l8.7-5M12 22V12"/></svg>
+        <span>Pedidos</span>
+        <span id="badge-cola" class="badge">0</span>
+      </button>
+    </div>
+  </nav>
+
   <script>
-    const dock = document.getElementById('nav-dock');
+    const dock = document.getElementById('dock');
     const apps = {
       clientes: document.getElementById('app-clientes'),
-      pedidos: document.getElementById('app-pedidos')
+      pedidos:  document.getElementById('app-pedidos')
     };
     const btns = {
       clientes: document.getElementById('btn-clientes'),
-      pedidos: document.getElementById('btn-pedidos')
+      pedidos:  document.getElementById('btn-pedidos')
     };
 
-    // 1. Cambiar de App
-    function switchTab(target) {
-      // Manejo de Iframes (Visibilidad)
-      Object.keys(apps).forEach(k => {
-        if (k === target) apps[k].classList.add('active');
-        else apps[k].classList.remove('active');
-      });
-
-      // Manejo de Botones (Estilos)
-      // Nota: El texto NO cambia, solo las clases de color
-      if (target === 'clientes') {
-        btns.clientes.classList.add('active-clientes');
-        btns.pedidos.classList.remove('active-pedidos');
-      } else {
-        btns.pedidos.classList.add('active-pedidos');
-        btns.clientes.classList.remove('active-clientes');
-      }
-
-      // Si la barra estaba minimizada, NO la subimos automáticamente
-      // para no molestar si el usuario quería espacio.
-      
-      // Vibración suave
-      if(navigator.vibrate) navigator.vibrate(10);
+    // ── Carga diferida: solo se carga una app al abrir; la otra, al primer uso ──
+    function ensureLoaded(key) {
+      const f = apps[key];
+      if (!f.src) { f.src = f.dataset.src; f.addEventListener('load', () => wireAutoHide(f)); }
     }
 
-    // 2. Minimizar / Maximizar
+    // ── Cambiar de app (recuerda la elección) ──
+    function switchTab(target) {
+      ensureLoaded(target);
+      Object.keys(apps).forEach(k => apps[k].classList.toggle('active', k === target));
+      btns.clientes.classList.toggle('on-clientes', target === 'clientes');
+      btns.pedidos.classList.toggle('on-pedidos',  target === 'pedidos');
+      try { localStorage.setItem('ml_shell_tab', target); } catch (e) {}
+      if (navigator.vibrate) navigator.vibrate(10);
+    }
+
+    // ── Minimizar / expandir manual ──
+    // userCollapsed: si el vendedor la escondió a mano, el auto-hide no la reabre.
+    let userCollapsed = false;
+    let autoCollapsed = false;
     function toggleDock() {
-      dock.classList.toggle('minimized');
-      if(navigator.vibrate) navigator.vibrate(5);
+      userCollapsed = !dock.classList.contains('collapsed');
+      autoCollapsed = false;
+      dock.classList.toggle('collapsed');
+      if (navigator.vibrate) navigator.vibrate(5);
+    }
+    function autoHide(on) {
+      if (userCollapsed) return;                    // respetar la decisión manual
+      if (on)  { dock.classList.add('collapsed');    autoCollapsed = true; }
+      else if (autoCollapsed) { dock.classList.remove('collapsed'); autoCollapsed = false; }
+    }
+
+    // ── AUTO-HIDE 1: foco en campos de texto dentro de las apps ──
+    // Shell y apps comparten dominio (github.io) → podemos escuchar el foco.
+    function esCampoTexto(el) {
+      if (!el) return false;
+      const tag = (el.tagName || '').toLowerCase();
+      return tag === 'textarea' || tag === 'input' || tag === 'select' || el.isContentEditable;
+    }
+    function wireAutoHide(iframe) {
+      try {
+        const doc = iframe.contentDocument;
+        if (!doc || doc.__mlWired) return;
+        doc.__mlWired = true;
+        doc.addEventListener('focusin',  (e) => { if (esCampoTexto(e.target)) autoHide(true); });
+        doc.addEventListener('focusout', () => {
+          setTimeout(() => { if (!esCampoTexto(doc.activeElement)) autoHide(false); }, 150);
+        });
+      } catch (e) { /* cross-origin (solo en desarrollo local): usa el fallback */ }
+    }
+
+    // ── AUTO-HIDE 2 (fallback): el teclado achica el viewport visible ──
+    if (window.visualViewport) {
+      const vvBase = window.visualViewport.height;
+      window.visualViewport.addEventListener('resize', () => {
+        const shrunk = vvBase - window.visualViewport.height > 140;
+        autoHide(shrunk);
+      });
+    }
+
+    // ── Badge "en cola": las apps comparten localStorage (mismo dominio) ──
+    function refreshBadge() {
+      try {
+        const q = JSON.parse(localStorage.getItem('pedidosPendientes') || '[]');
+        const b = document.getElementById('badge-cola');
+        b.textContent = q.length;
+        b.classList.toggle('show', q.length > 0);
+      } catch (e) {}
+    }
+    setInterval(refreshBadge, 5000);
+
+    // ── Arranque: recordar la última app usada ──
+    let inicio = 'clientes';
+    try { inicio = localStorage.getItem('ml_shell_tab') || 'clientes'; } catch (e) {}
+    if (!apps[inicio]) inicio = 'clientes';
+    switchTab(inicio);
+    refreshBadge();
+
+    // ── Service Worker del shell (network-first: se actualiza solo, abre offline) ──
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./service-worker.js', { scope: './' }).catch(() => {});
+      });
     }
   </script>
 
