@@ -68,24 +68,26 @@
     }
     .app-layer.active { opacity: 1; pointer-events: auto; visibility: visible; }
 
-    /* ── DOCK (en el flujo del layout) ── */
+    /* ── DOCK compacto (en el flujo del layout) ── */
     #dock {
       flex: 0 0 auto;
       background: var(--dock-bg);
       border-top: 1px solid var(--border);
       box-shadow: 0 -4px 18px rgba(10, 20, 30, 0.06);
-      padding-bottom: env(safe-area-inset-bottom, 0px);
+      padding: 0 10px calc(5px + env(safe-area-inset-bottom, 0px));
     }
 
     /* Tirita para minimizar/expandir — parte del dock, no flota sobre la app.
        Discreta con el banner abierto; llamativa (naranja + pulso) cuando
        está oculto, para que sea fácil de encontrar y volver a desplegar. */
     .grab {
-      height: 26px;
+      height: 17px;
+      margin: 0 -10px;                 /* ancho completo, ignora el padding lateral */
       display: flex; align-items: center; justify-content: center;
       cursor: pointer;
-      transition: background 0.3s;
+      transition: background 0.3s, height 0.3s;
     }
+    #dock.collapsed .grab { height: 24px; }   /* oculto: más alta para el dedo */
     .grab-pill {
       width: 40px; height: 4px;
       border-radius: 999px;
@@ -115,11 +117,12 @@
       50%      { box-shadow: 0 -5px 26px rgba(255, 176, 32, 0.85); }
     }
 
-    /* Botonera — colapsa a 0 sin salirse del flujo */
+    /* Botonera compacta (ícono + texto en fila) — colapsa a 0 sin salirse del flujo */
     .dock-btns {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      height: 58px;
+      gap: 8px;
+      height: 44px;
       overflow: hidden;
       transition: height 0.3s cubic-bezier(0.25, 1, 0.5, 1);
     }
@@ -128,42 +131,44 @@
     .nav-btn {
       background: transparent; border: none;
       color: var(--muted);
-      font-family: inherit; font-weight: 800; font-size: 11px;
-      letter-spacing: 0.08em; text-transform: uppercase;
-      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+      font-family: inherit; font-weight: 800; font-size: 11.5px;
+      letter-spacing: 0.07em; text-transform: uppercase;
+      display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 7px;
       cursor: pointer; position: relative;
       height: 100%;
+      border-radius: 12px;
       transition: color 0.2s, background 0.2s;
     }
-    .nav-btn + .nav-btn { border-left: 1px solid var(--border); }
     .nav-btn svg {
-      width: 22px; height: 22px;
-      stroke: currentColor; stroke-width: 2; fill: none;
+      width: 19px; height: 19px;
+      stroke: currentColor; stroke-width: 2.1; fill: none;
       stroke-linecap: round; stroke-linejoin: round;
       transition: transform 0.15s;
     }
-    .nav-btn:active svg { transform: scale(0.9); }
+    .nav-btn:active { transform: scale(0.97); }
+    .nav-btn:active svg { transform: scale(0.92); }
 
+    /* Activo: píldora de color, limpia y moderna */
     .nav-btn.on-clientes {
       color: var(--clientes);
-      background: linear-gradient(to top, rgba(46, 107, 255, 0.10), transparent);
-      box-shadow: inset 0 -3px 0 var(--clientes);
+      background: rgba(46, 107, 255, 0.12);
+      box-shadow: inset 0 0 0 1px rgba(46, 107, 255, 0.25);
     }
     .nav-btn.on-pedidos {
       color: var(--pedidos);
-      background: linear-gradient(to top, rgba(11, 179, 123, 0.12), transparent);
-      box-shadow: inset 0 -3px 0 var(--pedidos);
+      background: rgba(11, 179, 123, 0.14);
+      box-shadow: inset 0 0 0 1px rgba(11, 179, 123, 0.28);
     }
 
     /* Badge: pedidos en cola sin sincronizar */
     .badge {
       position: absolute;
-      top: 7px; right: calc(50% - 34px);
-      min-width: 17px; height: 17px;
+      top: 4px; right: 10px;
+      min-width: 16px; height: 16px;
       padding: 0 4px;
       background: #FF5D5D; color: #fff;
       border-radius: 999px;
-      font-size: 10px; font-weight: 800;
+      font-size: 9.5px; font-weight: 800;
       display: none;
       align-items: center; justify-content: center;
       line-height: 1;
