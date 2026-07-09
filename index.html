@@ -67,19 +67,43 @@
       padding-bottom: env(safe-area-inset-bottom, 0px);
     }
 
-    /* Tirita para minimizar/expandir — parte del dock, no flota sobre la app */
+    /* Tirita para minimizar/expandir — parte del dock, no flota sobre la app.
+       Discreta con el banner abierto; llamativa (naranja + pulso) cuando
+       está oculto, para que sea fácil de encontrar y volver a desplegar. */
     .grab {
-      height: 22px;
+      height: 26px;
       display: flex; align-items: center; justify-content: center;
       cursor: pointer;
+      transition: background 0.3s;
+    }
+    .grab-pill {
+      width: 40px; height: 4px;
+      border-radius: 999px;
+      background: var(--border);
+      position: absolute;
+      transition: background 0.3s, box-shadow 0.3s;
     }
     .grab svg {
-      width: 16px; height: 16px;
+      width: 15px; height: 15px;
       stroke: var(--muted); stroke-width: 2.5; fill: none;
       stroke-linecap: round; stroke-linejoin: round;
-      transition: transform 0.3s;
+      transition: transform 0.3s, stroke 0.3s;
+      position: relative;
     }
     #dock.collapsed .grab svg { transform: rotate(180deg); }
+
+    /* Oculto: la manija se vuelve un faro naranja con pulso suave */
+    #dock.collapsed .grab {
+      background: #FFB020;
+      box-shadow: 0 -2px 16px rgba(255, 176, 32, 0.55);
+      animation: grabGlow 2.2s ease-in-out infinite;
+    }
+    #dock.collapsed .grab-pill { background: rgba(4, 20, 14, 0.35); }
+    #dock.collapsed .grab svg  { stroke: #1A1300; }
+    @keyframes grabGlow {
+      0%, 100% { box-shadow: 0 -2px 16px rgba(255, 176, 32, 0.40); }
+      50%      { box-shadow: 0 -5px 26px rgba(255, 176, 32, 0.85); }
+    }
 
     /* Botonera — colapsa a 0 sin salirse del flujo */
     .dock-btns {
@@ -153,6 +177,7 @@
   <!-- ═══ DOCK (en el layout: nunca tapa la app) ═══ -->
   <nav id="dock">
     <div class="grab" onclick="toggleDock()" title="Ocultar / mostrar barra">
+      <span class="grab-pill" aria-hidden="true"></span>
       <svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
     </div>
     <div class="dock-btns">
