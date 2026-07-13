@@ -1,6 +1,6 @@
 {
-  "name": "Mercado Limpio",
-  "short_name": "Mercado ML",
+  "name": "Pedidos y Clientes ML",
+  "short_name": "Pedidos y Clientes ML",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#EEF2F7",
