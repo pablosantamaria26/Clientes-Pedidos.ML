@@ -51,22 +51,26 @@
 
     /* ── ESCENARIO: las dos apps ── */
     #stage { flex: 1 1 auto; position: relative; min-height: 0; }
-    /* La capa inactiva se oculta con VISIBILITY (no solo opacity/pointer-events):
-       en iPhone los iframes ignoran pointer-events:none para los TOQUES, y el
-       iframe invisible de arriba se comía todo el táctil de la app activa
-       (mouse andaba, dedo no). visibility:hidden sí lo saca del hit-testing
-       y conserva el estado de la app sin recargarla. Tampoco usamos transform
-       (scale) sobre iframes: rompe el hit-testing táctil en iOS. */
+    /* La capa inactiva sale del layout con DISPLAY:NONE — no apilada por
+       encima con position:absolute/opacity. Esa superposición (probada
+       antes con visibility:hidden) arreglaba el iOS-bug de iframes que
+       comían el táctil, pero seguía dejando DOS iframes en el mismo
+       espacio de layout; en Android esa combinación (absolute+inset:0
+       dentro de un flex con min-height:0) es un patrón conocido de
+       problemas de scroll/touch. display:none saca al iframe inactivo
+       por completo del árbol de render — sin ambigüedad en ninguna
+       plataforma — y el activo ocupa el contenedor de forma normal
+       (sin position:absolute). Se pierde el fundido entre apps; se
+       prioriza que el scroll/táctil sea 100% confiable en todos lados.
+       El estado de cada app se conserva igual (el iframe no se recarga,
+       solo deja de estar en el árbol visual). */
     .app-layer {
-      position: absolute; inset: 0;
+      display: none;
       width: 100%; height: 100%;
       border: 0;
-      opacity: 0; pointer-events: none;
-      visibility: hidden;
-      transition: opacity 0.25s, visibility 0.25s;
       background: var(--bg);
     }
-    .app-layer.active { opacity: 1; pointer-events: auto; visibility: visible; }
+    .app-layer.active { display: block; }
 
     /* ── DOCK compacto (en el flujo del layout) ── */
     #dock {
