@@ -226,7 +226,24 @@
     // ── Carga diferida: solo se carga una app al abrir; la otra, al primer uso ──
     function ensureLoaded(key) {
       const f = apps[key];
-      if (!f.src) { f.src = f.dataset.src; f.addEventListener('load', () => wireAutoHide(f)); }
+      if (!f.src) {
+        f.src = f.dataset.src;
+        f.addEventListener('load', () => { wireAutoHide(f); kickReflowTactil(f); });
+      }
+    }
+
+    // Fuerza a Android/Chrome a recalcular la "zona táctil" de scroll del
+    // iframe: cuando un iframe recibe su src o vuelve a mostrarse DESPUÉS
+    // del primer pintado de la página, algunos Chrome/Android no
+    // recomponen bien esa zona — se ve perfecto pero el dedo no engancha
+    // el scroll. Alternar display en dos frames distintos fuerza un
+    // repintado real que resuelve el desajuste.
+    function kickReflowTactil(el) {
+      el.style.display = 'none';
+      requestAnimationFrame(() => {
+        void el.offsetHeight;   // forzar reflow síncrono
+        requestAnimationFrame(() => { el.style.display = ''; });
+      });
     }
 
     // ── Cambiar de app (recuerda la elección) ──
@@ -237,6 +254,7 @@
       btns.pedidos.classList.toggle('on-pedidos',  target === 'pedidos');
       try { localStorage.setItem('ml_shell_tab', target); } catch (e) {}
       if (navigator.vibrate) navigator.vibrate(10);
+      kickReflowTactil(apps[target]);
     }
 
     // ── Minimizar / expandir manual ──

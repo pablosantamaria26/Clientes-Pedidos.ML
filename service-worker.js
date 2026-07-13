@@ -4,7 +4,7 @@
 // Nota: las apps de adentro tienen sus propios service workers en sus
 // scopes (/app-vendedores/, /App-Pedidos-ML/); este solo cachea el shell.
 
-const CACHE_NAME = "ml-shell-v8";
+const CACHE_NAME = "ml-shell-v9";
 const HTML_TIMEOUT_MS = 2500;
 const PRECACHE_URLS = ["./", "./index.html", "./manifest.json"];
 
