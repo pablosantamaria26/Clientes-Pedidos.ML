@@ -178,6 +178,60 @@
       line-height: 1;
     }
     .badge.show { display: flex; }
+
+    /* ══ Instalar la app (Android/iOS) — vive en el shell: se instala el contenedor ══ */
+    /* Barra fina sobre el dock: aparece SIEMPRE (fuera de la app instalada) hasta que instalen */
+    #install-bar {
+      flex: 0 0 auto;
+      display: none;
+      align-items: center; gap: 8px;
+      padding: 9px 12px calc(9px + env(safe-area-inset-bottom, 0px));
+      background: var(--clientes); color: #fff;
+      font-family: inherit; font-weight: 800; font-size: 12.5px; letter-spacing: 0.02em;
+    }
+    #install-bar.show { display: flex; }
+    #install-bar .ib-txt { flex: 1; line-height: 1.3; }
+    #install-bar button { flex: 0 0 auto; font-family: inherit; cursor: pointer; border: 0; }
+    #install-bar .ib-go {
+      background: #fff; color: var(--clientes);
+      border-radius: 999px; padding: 7px 15px;
+      font-weight: 900; font-size: 12px;
+    }
+    #install-bar .ib-x {
+      background: transparent; color: rgba(255,255,255,.9);
+      padding: 6px 4px; font-size: 17px; line-height: 1;
+    }
+
+    /* Modal primera vez */
+    #install-modal {
+      position: fixed; inset: 0; z-index: 9999;
+      display: none; align-items: center; justify-content: center;
+      background: rgba(4, 12, 20, 0.55); padding: 24px;
+    }
+    #install-modal.show { display: flex; }
+    #install-modal .card {
+      background: var(--dock-bg); color: var(--text);
+      border-radius: 22px; padding: 24px 22px;
+      max-width: 340px; width: 100%; text-align: center;
+      box-shadow: 0 20px 60px rgba(0,0,0,.35);
+    }
+    #install-modal img { width: 56px; height: 56px; border-radius: 16px; margin: 0 auto 14px; display: block; }
+    #install-modal h2 { font-size: 19px; font-weight: 900; margin-bottom: 6px; }
+    #install-modal p  { font-size: 13.5px; color: var(--muted); line-height: 1.5; margin-bottom: 18px; }
+    #install-modal .im-go {
+      width: 100%; background: var(--clientes); color: #fff;
+      border: 0; border-radius: 14px; padding: 14px;
+      font-family: inherit; font-weight: 900; font-size: 14px; cursor: pointer; margin-bottom: 8px;
+    }
+    #install-modal .im-manual {
+      display: none; text-align: left;
+      font-size: 12.5px; color: var(--muted); line-height: 1.5;
+      background: var(--bg); border-radius: 12px; padding: 12px; margin-bottom: 8px;
+    }
+    #install-modal .im-later {
+      width: 100%; background: transparent; color: var(--muted);
+      border: 0; padding: 10px; font-family: inherit; font-weight: 800; font-size: 13px; cursor: pointer;
+    }
   </style>
 </head>
 <body>
@@ -191,6 +245,13 @@
     <iframe id="app-pedidos" class="app-layer"
       data-src="https://pablosantamaria26.github.io/App-Pedidos-ML/index.html"
       allow="geolocation; microphone; camera; fullscreen"></iframe>
+  </div>
+
+  <!-- ═══ BARRA INSTALAR (Android/iOS): sobre el dock, hasta que instalen ═══ -->
+  <div id="install-bar">
+    <span class="ib-txt">Instalá la app: abre al toque y sin buscar el link</span>
+    <button type="button" class="ib-go" id="ib-go">Instalar</button>
+    <button type="button" class="ib-x" id="ib-x" aria-label="Cerrar">&times;</button>
   </div>
 
   <!-- ═══ DOCK (en el layout: nunca tapa la app) ═══ -->
@@ -211,6 +272,18 @@
       </button>
     </div>
   </nav>
+
+  <!-- ═══ MODAL INSTALAR (primera vez) ═══ -->
+  <div id="install-modal">
+    <div class="card">
+      <img src="./ml-icon-192.png" alt="">
+      <h2>Instalá la app</h2>
+      <p>Se agrega a la pantalla del celular como una app: abre al toque, sin buscar el link, y funciona aunque no haya señal.</p>
+      <button type="button" class="im-go" id="im-go">Instalar ahora</button>
+      <div class="im-manual" id="im-manual"></div>
+      <button type="button" class="im-later" id="im-later">Ahora no</button>
+    </div>
+  </div>
 
   <script>
     const dock = document.getElementById('dock');
@@ -325,6 +398,88 @@
         navigator.serviceWorker.register('./service-worker.js', { scope: './' }).catch(() => {});
       });
     }
+
+    // ═══════════════════════════════════════════════════════════
+    //  INSTALAR PWA — vive en el shell (se instala el CONTENEDOR,
+    //  con las dos apps). El beforeinstallprompt de Android solo
+    //  lo dispara la página de arriba, nunca un iframe.
+    //  Barra sobre el dock: aparece SIEMPRE (fuera de la app ya
+    //  instalada) hasta que instalen. Modal: solo la primera vez.
+    // ═══════════════════════════════════════════════════════════
+    (function installUX(){
+      const KEY_SEEN = 'ml_shell_install_modal_seen';
+      let deferredPrompt = null;
+
+      const bar    = document.getElementById('install-bar');
+      const modal  = document.getElementById('install-modal');
+      const manual = document.getElementById('im-manual');
+      const imGo   = document.getElementById('im-go');
+
+      const isStandalone = () =>
+        matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+      const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent);
+      const isAndroid = () => /android/i.test(navigator.userAgent);
+      const seen = () => { try { return !!localStorage.getItem(KEY_SEEN); } catch(_) { return false; } };
+      const markSeen = () => { try { localStorage.setItem(KEY_SEEN, '1'); } catch(_) {} };
+
+      const manualText = () => isIOS()
+        ? 'En iPhone: tocá <b>Compartir</b> (el cuadrado con la flecha ↑) y elegí <b>“Agregar a inicio”</b>.'
+        : 'En Android: abrí el menú <b>⋮</b> del navegador (arriba a la derecha) y tocá <b>“Instalar app”</b> o <b>“Agregar a pantalla principal”</b>.';
+
+      function showBar(){ if (!isStandalone()) bar.classList.add('show'); }
+      function hideBar(){ bar.classList.remove('show'); }
+      function closeModal(){ modal.classList.remove('show'); }
+      function openModalManual(){
+        imGo.style.display = 'none';
+        manual.innerHTML = manualText();
+        manual.style.display = 'block';
+        modal.classList.add('show');
+      }
+      function openModalNativo(){
+        imGo.style.display = '';
+        manual.style.display = 'none';
+        modal.classList.add('show');
+      }
+
+      async function instalar(){
+        if (deferredPrompt){
+          deferredPrompt.prompt();
+          const { outcome } = await deferredPrompt.userChoice;
+          deferredPrompt = null;
+          if (outcome === 'accepted'){ hideBar(); closeModal(); }
+          else { closeModal(); showBar(); }   // rechazó: la barra queda de recordatorio
+          return;
+        }
+        openModalManual();   // sin evento nativo (iOS, Firefox, o Chrome que aún no lo ofrece)
+      }
+
+      // Chrome/Android: capturar instalabilidad
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        showBar();
+        if (!seen() && !isStandalone()) openModalNativo();
+      });
+
+      window.addEventListener('appinstalled', () => {
+        deferredPrompt = null;
+        hideBar(); closeModal();
+      });
+
+      document.getElementById('ib-go').addEventListener('click', instalar);
+      imGo.addEventListener('click', instalar);
+      document.getElementById('ib-x').addEventListener('click', hideBar); // solo esta sesión
+      document.getElementById('im-later').addEventListener('click', () => { markSeen(); closeModal(); showBar(); });
+
+      // Fuera de standalone en celular: mostrar la barra igual (~2.5s) por si
+      // beforeinstallprompt no llegó, y en iOS abrir el modal la primera vez.
+      if (!isStandalone() && (isAndroid() || isIOS())){
+        setTimeout(() => {
+          showBar();
+          if (isIOS() && !seen()){ markSeen(); openModalManual(); }
+        }, 2500);
+      }
+    })();
   </script>
 
 </body>

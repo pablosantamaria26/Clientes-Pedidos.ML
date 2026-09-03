@@ -4,9 +4,13 @@
 // Nota: las apps de adentro tienen sus propios service workers en sus
 // scopes (/app-vendedores/, /App-Pedidos-ML/); este solo cachea el shell.
 
-const CACHE_NAME = "ml-shell-v10";
+const CACHE_NAME = "ml-shell-v11";
 const HTML_TIMEOUT_MS = 2500;
-const PRECACHE_URLS = ["./", "./index.html", "./manifest.json"];
+const PRECACHE_URLS = [
+  "./", "./index.html", "./manifest.json",
+  "./ml-icon-192.png", "./ml-icon-512.png",
+  "./ml-icon-192-maskable.png", "./ml-icon-512-maskable.png"
+];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(

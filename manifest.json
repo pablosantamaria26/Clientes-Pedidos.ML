@@ -1,21 +1,38 @@
 {
+  "id": "./index.html",
   "name": "Pedidos y Clientes ML",
   "short_name": "Pedidos y Clientes ML",
   "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "background_color": "#EEF2F7",
   "theme_color": "#EEF2F7",
   "orientation": "portrait",
   "icons": [
     {
-      "src": "https://pablosantamaria26.github.io/app-vendedores/ml-icon-192.png",
+      "src": "./ml-icon-192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
-      "src": "https://pablosantamaria26.github.io/app-vendedores/ml-icon-512.png",
+      "src": "./ml-icon-512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./ml-icon-192-maskable.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "./ml-icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }
