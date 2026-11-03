@@ -4,7 +4,7 @@
 // Nota: las apps de adentro tienen sus propios service workers en sus
 // scopes (/app-vendedores/, /App-Pedidos-ML/); este solo cachea el shell.
 
-const CACHE_NAME = "ml-shell-v11";
+const CACHE_NAME = "ml-shell-v12";
 const HTML_TIMEOUT_MS = 2500;
 const PRECACHE_URLS = [
   "./", "./index.html", "./manifest.json",
@@ -23,7 +23,7 @@ self.addEventListener("install", (e) => {
 self.addEventListener("activate", (e) => {
   e.waitUntil((async () => {
     const keys = await caches.keys();
-    await Promise.all(keys.map(k => (k !== CACHE_NAME ? caches.delete(k) : null)));
+    await Promise.all(keys.map(k => (k !== CACHE_NAME && k.startsWith("ml-shell-") ? caches.delete(k) : null)));
     await self.clients.claim();
   })());
 });
